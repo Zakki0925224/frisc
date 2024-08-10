@@ -16,10 +16,7 @@ impl Emulator {
 
     pub fn run(&mut self) -> anyhow::Result<()> {
         loop {
-            print!("PC: 0x{:08x}: ", self.cpu.pc.load());
-            let instruction = self.cpu.fetch(&self.ram)?;
-            println!("instruction: 0x{:08x}", instruction);
-
+            self.cpu.fetch_decode_execute(&self.ram)?;
             if self.cpu.pc.load() == 0 {
                 break;
             }

@@ -1,4 +1,5 @@
 use crate::{
+    instruction::Instruction,
     ram::Ram,
     register::{ProgramCounter, Register},
 };
@@ -35,7 +36,33 @@ impl Cpu {
         self.state = CpuState::Reset;
     }
 
-    pub fn fetch(&mut self, ram: &Ram) -> anyhow::Result<u32> {
+    pub fn fetch_decode_execute(&mut self, ram: &Ram) -> anyhow::Result<()> {
+        let pc = self.pc.load();
+        println!("PC: 0x{:08x}", pc);
+
+        print!("fetching ...");
+        let instruction = self.fetch(ram)?;
+        println!("0x{:08x}", instruction);
+
+        print!("decoding ...");
+        let decoded_instruction = self.decode(ram, instruction)?;
+        println!("{:?}", decoded_instruction);
+
+        print!("executing...");
+        self.execute(ram, decoded_instruction)?;
+        println!("done!");
+        println!("{:?}", self);
+
+        self.pc.increment();
+        Ok(())
+    }
+
+    fn fetch(&mut self, ram: &Ram) -> anyhow::Result<u32> {
+        match self.state {
+            CpuState::Reset | CpuState::Execute => (),
+            _ => return Err(anyhow::anyhow!("Invalid state for fetch")),
+        }
+
         self.state = CpuState::Fetch;
 
         let pc = self.pc.load();
@@ -44,8 +71,35 @@ impl Cpu {
         }
 
         let instruction = ram.read32(pc);
-        self.pc.increment();
-
         Ok(instruction)
+    }
+
+    fn decode(&mut self, ram: &Ram, instruction: u32) -> anyhow::Result<Instruction> {
+        match self.state {
+            CpuState::Fetch => (),
+            _ => return Err(anyhow::anyhow!("Invalid state for decode")),
+        }
+
+        self.state = CpuState::Decode;
+        let parsed_instruction = Instruction::parse(instruction)?;
+
+        Ok(parsed_instruction)
+    }
+
+    fn execute(&mut self, ram: &Ram, instruction: Instruction) -> anyhow::Result<()> {
+        match self.state {
+            CpuState::Decode => (),
+            _ => return Err(anyhow::anyhow!("Invalid state for execute")),
+        }
+
+        self.state = CpuState::Execute;
+
+        match instruction {
+            Instruction::Add { rd, rs1, rs2 } => {
+                self.x_regs[rd].store(self.x_regs[rs1].load() + self.x_regs[rs2].load());
+            }
+        }
+
+        Ok(())
     }
 }

@@ -1,5 +1,13 @@
-#[derive(Debug, Clone, Copy, Default)]
+use core::fmt::Debug;
+
+#[derive(Clone, Copy, Default)]
 pub struct Register(u32);
+
+impl Debug for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{:08x}", self.0)
+    }
+}
 
 impl Register {
     pub fn load(&self) -> u32 {
