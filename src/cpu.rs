@@ -1,5 +1,5 @@
 use crate::{
-    instruction::Instruction,
+    instruction::{Instruction, InstructionFormat},
     ram::Ram,
     register::{ProgramCounter, Register},
 };
@@ -45,7 +45,7 @@ impl Cpu {
         println!("0x{:08x}", instruction);
 
         print!("decoding ...");
-        let decoded_instruction = self.decode(ram, instruction)?;
+        let decoded_instruction = self.decode(instruction)?;
         println!("{:?}", decoded_instruction);
 
         print!("executing...");
@@ -74,19 +74,19 @@ impl Cpu {
         Ok(instruction)
     }
 
-    fn decode(&mut self, ram: &Ram, instruction: u32) -> anyhow::Result<Instruction> {
+    fn decode(&mut self, instruction: u32) -> anyhow::Result<Instruction> {
         match self.state {
             CpuState::Fetch => (),
             _ => return Err(anyhow::anyhow!("Invalid state for decode")),
         }
 
         self.state = CpuState::Decode;
-        let parsed_instruction = Instruction::parse(instruction)?;
-
+        let instruction_format = InstructionFormat::parse(instruction)?;
+        let parsed_instruction = Instruction::parse(instruction_format)?;
         Ok(parsed_instruction)
     }
 
-    fn execute(&mut self, ram: &Ram, instruction: Instruction) -> anyhow::Result<()> {
+    fn execute(&mut self, _ram: &Ram, instruction: Instruction) -> anyhow::Result<()> {
         match self.state {
             CpuState::Decode => (),
             _ => return Err(anyhow::anyhow!("Invalid state for execute")),
@@ -96,8 +96,34 @@ impl Cpu {
 
         match instruction {
             Instruction::Add { rd, rs1, rs2 } => {
-                self.x_regs[rd].store(self.x_regs[rs1].load() + self.x_regs[rs2].load());
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                self.store_x_regs(rd, x_rs1 + x_rs2)?;
             }
+            Instruction::Addi { rd, rs1, imm } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                self.store_x_regs(rd, (x_rs1 as i32 + imm) as u32)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn load_x_regs(&mut self, index: usize) -> anyhow::Result<u32> {
+        if index >= self.x_regs.len() {
+            return Err(anyhow::anyhow!("Index out of bounds"));
+        }
+
+        Ok(self.x_regs[index].load())
+    }
+
+    fn store_x_regs(&mut self, index: usize, value: u32) -> anyhow::Result<()> {
+        if index >= self.x_regs.len() {
+            return Err(anyhow::anyhow!("Index out of bounds"));
+        }
+
+        if index != 0 {
+            self.x_regs[index].store(value);
         }
 
         Ok(())

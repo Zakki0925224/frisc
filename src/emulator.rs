@@ -2,8 +2,8 @@ use crate::{cpu::Cpu, ram::Ram};
 
 #[derive(Debug, Default)]
 pub struct Emulator {
-    cpu: Cpu,
-    ram: Ram,
+    pub cpu: Cpu,
+    pub ram: Ram,
 }
 
 impl Emulator {
@@ -17,7 +17,7 @@ impl Emulator {
     pub fn run(&mut self) -> anyhow::Result<()> {
         loop {
             self.cpu.fetch_decode_execute(&self.ram)?;
-            if self.cpu.pc.load() == 0 {
+            if self.cpu.pc.load() as usize >= self.ram.size() {
                 break;
             }
         }
