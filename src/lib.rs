@@ -69,3 +69,26 @@ fn test_and_andi() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_or_ori() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x82, 0x50, 0x34, // ADDI x5, x1, 837
+        0x13, 0x03, 0x71, 0x10, // ADDI x6, x2, 263
+        0x33, 0xe4, 0x62, 0x00, // OR x8, x5, x6
+        0x93, 0x64, 0xf4, 0xff, // ORI x9, x8, -1
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[5].load(), 837);
+    assert_eq!(emulator.cpu.x_regs[6].load(), 263);
+    assert_eq!(emulator.cpu.x_regs[8].load(), 839);
+    assert_eq!(emulator.cpu.x_regs[9].load() as i32, -1);
+
+    Ok(())
+}

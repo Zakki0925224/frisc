@@ -127,6 +127,8 @@ pub enum Instruction {
     Sub { rd: usize, rs1: usize, rs2: usize },
     And { rd: usize, rs1: usize, rs2: usize },
     Andi { rd: usize, rs1: usize, imm: i32 },
+    Or { rd: usize, rs1: usize, rs2: usize },
+    Ori { rd: usize, rs1: usize, imm: i32 },
 }
 
 impl Instruction {
@@ -140,26 +142,16 @@ impl Instruction {
                 rs2,
                 funct7,
             } => {
-                if funct3 == 0b000 && funct7 == 0b0000000 {
-                    Self::Add {
-                        rd: rd as usize,
-                        rs1: rs1 as usize,
-                        rs2: rs2 as usize,
-                    }
-                } else if funct3 == 0b000 && funct7 == 0b0100000 {
-                    Self::Sub {
-                        rd: rd as usize,
-                        rs1: rs1 as usize,
-                        rs2: rs2 as usize,
-                    }
-                } else if funct3 == 0b111 && funct7 == 0b0000000 {
-                    Self::And {
-                        rd: rd as usize,
-                        rs1: rs1 as usize,
-                        rs2: rs2 as usize,
-                    }
-                } else {
-                    unimplemented!()
+                let rd = rd as usize;
+                let rs1 = rs1 as usize;
+                let rs2 = rs2 as usize;
+
+                match (funct3, funct7) {
+                    (0b000, 0b0000000) => Self::Add { rd, rs1, rs2 },
+                    (0b000, 0b0100000) => Self::Sub { rd, rs1, rs2 },
+                    (0b111, 0b0000000) => Self::And { rd, rs1, rs2 },
+                    (0b110, 0b0000000) => Self::Or { rd, rs1, rs2 },
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::I {
@@ -169,25 +161,18 @@ impl Instruction {
                 rs1,
                 imm0_11,
             } => {
+                let rd = rd as usize;
+                let rs1 = rs1 as usize;
                 let mut imm = imm0_11 as i32;
                 if imm & 0x800 != 0 {
                     imm |= 0xfffff000u32 as i32;
                 }
 
-                if funct3 == 0b000 {
-                    Self::Addi {
-                        rd: rd as usize,
-                        rs1: rs1 as usize,
-                        imm,
-                    }
-                } else if funct3 == 0b111 {
-                    Self::Andi {
-                        rd: rd as usize,
-                        rs1: rs1 as usize,
-                        imm,
-                    }
-                } else {
-                    unimplemented!()
+                match funct3 {
+                    0b000 => Self::Addi { rd, rs1, imm },
+                    0b111 => Self::Andi { rd, rs1, imm },
+                    0b110 => Self::Ori { rd, rs1, imm },
+                    _ => unimplemented!(),
                 }
             }
             _ => {
