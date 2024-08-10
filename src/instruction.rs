@@ -125,6 +125,8 @@ pub enum Instruction {
     Add { rd: usize, rs1: usize, rs2: usize },
     Addi { rd: usize, rs1: usize, imm: i32 },
     Sub { rd: usize, rs1: usize, rs2: usize },
+    And { rd: usize, rs1: usize, rs2: usize },
+    Andi { rd: usize, rs1: usize, imm: i32 },
 }
 
 impl Instruction {
@@ -150,6 +152,12 @@ impl Instruction {
                         rs1: rs1 as usize,
                         rs2: rs2 as usize,
                     }
+                } else if funct3 == 0b111 && funct7 == 0b0000000 {
+                    Self::And {
+                        rd: rd as usize,
+                        rs1: rs1 as usize,
+                        rs2: rs2 as usize,
+                    }
                 } else {
                     unimplemented!()
                 }
@@ -161,13 +169,19 @@ impl Instruction {
                 rs1,
                 imm0_11,
             } => {
-                if funct3 == 0b000 {
-                    let mut imm = imm0_11 as i32;
-                    if imm & 0x800 != 0 {
-                        imm |= 0xfffff000u32 as i32;
-                    }
+                let mut imm = imm0_11 as i32;
+                if imm & 0x800 != 0 {
+                    imm |= 0xfffff000u32 as i32;
+                }
 
+                if funct3 == 0b000 {
                     Self::Addi {
+                        rd: rd as usize,
+                        rs1: rs1 as usize,
+                        imm,
+                    }
+                } else if funct3 == 0b111 {
+                    Self::Andi {
                         rd: rd as usize,
                         rs1: rs1 as usize,
                         imm,

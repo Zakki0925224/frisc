@@ -46,3 +46,26 @@ fn test_sub() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_and_andi() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x81, 0xa0, 0x0e, // ADDI x3, x1, 234
+        0x13, 0x02, 0x21, 0x09, // ADDI x4, x2, 146
+        0x33, 0x75, 0x32, 0x00, // AND x10, x4, x3
+        0x13, 0x76, 0x55, 0xff, // ANDI x12, x10, -11
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[3].load(), 234);
+    assert_eq!(emulator.cpu.x_regs[4].load(), 146);
+    assert_eq!(emulator.cpu.x_regs[10].load(), 130);
+    assert_eq!(emulator.cpu.x_regs[12].load(), 128);
+
+    Ok(())
+}
