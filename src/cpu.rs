@@ -37,9 +37,6 @@ impl Cpu {
     }
 
     pub fn fetch_decode_execute(&mut self, ram: &Ram) -> anyhow::Result<()> {
-        let pc = self.pc.load();
-        println!("PC: 0x{:08x}", pc);
-
         print!("fetching ...");
         let instruction = self.fetch(ram)?;
         println!("0x{:08x}", instruction);
@@ -103,6 +100,11 @@ impl Cpu {
             Instruction::Addi { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 self.store_x_regs(rd, (x_rs1 as i32 + imm) as u32)?;
+            }
+            Instruction::Sub { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                let x_rs2 = self.load_x_regs(rs2)? as i32;
+                self.store_x_regs(rd, (x_rs1 - x_rs2) as u32)?;
             }
         }
 

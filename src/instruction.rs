@@ -124,6 +124,7 @@ impl InstructionFormat {
 pub enum Instruction {
     Add { rd: usize, rs1: usize, rs2: usize },
     Addi { rd: usize, rs1: usize, imm: i32 },
+    Sub { rd: usize, rs1: usize, rs2: usize },
 }
 
 impl Instruction {
@@ -143,6 +144,12 @@ impl Instruction {
                         rs1: rs1 as usize,
                         rs2: rs2 as usize,
                     }
+                } else if funct3 == 0b000 && funct7 == 0b0100000 {
+                    Self::Sub {
+                        rd: rd as usize,
+                        rs1: rs1 as usize,
+                        rs2: rs2 as usize,
+                    }
                 } else {
                     unimplemented!()
                 }
@@ -155,10 +162,15 @@ impl Instruction {
                 imm0_11,
             } => {
                 if funct3 == 0b000 {
+                    let mut imm = imm0_11 as i32;
+                    if imm & 0x800 != 0 {
+                        imm |= 0xfffff000u32 as i32;
+                    }
+
                     Self::Addi {
                         rd: rd as usize,
                         rs1: rs1 as usize,
-                        imm: imm0_11 as i32, // TODO
+                        imm,
                     }
                 } else {
                     unimplemented!()
