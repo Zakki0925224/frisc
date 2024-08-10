@@ -124,6 +124,33 @@ impl Cpu {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 | imm) as u32)?;
             }
+            Instruction::Xor { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                self.store_x_regs(rd, x_rs1 ^ x_rs2)?;
+            }
+            Instruction::Xori { rd, rs1, imm } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                self.store_x_regs(rd, (x_rs1 ^ imm) as u32)?;
+            }
+            Instruction::Sll { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = (self.load_x_regs(rs2)? & 0x1f) as u8;
+                self.store_x_regs(rd, x_rs1 << x_rs2)?;
+            }
+            Instruction::Slli { rd, rs1, shamt } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                self.store_x_regs(rd, x_rs1 << shamt)?;
+            }
+            Instruction::Srl { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = (self.load_x_regs(rs2)? & 0x1f) as u8;
+                self.store_x_regs(rd, x_rs1 >> x_rs2)?;
+            }
+            Instruction::Srli { rd, rs1, shamt } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                self.store_x_regs(rd, x_rs1 >> shamt)?;
+            }
         }
 
         Ok(())

@@ -129,6 +129,12 @@ pub enum Instruction {
     Andi { rd: usize, rs1: usize, imm: i32 },
     Or { rd: usize, rs1: usize, rs2: usize },
     Ori { rd: usize, rs1: usize, imm: i32 },
+    Xor { rd: usize, rs1: usize, rs2: usize },
+    Xori { rd: usize, rs1: usize, imm: i32 },
+    Sll { rd: usize, rs1: usize, rs2: usize },
+    Slli { rd: usize, rs1: usize, shamt: u8 },
+    Srl { rd: usize, rs1: usize, rs2: usize },
+    Srli { rd: usize, rs1: usize, shamt: u8 },
 }
 
 impl Instruction {
@@ -151,6 +157,9 @@ impl Instruction {
                     (0b000, 0b0100000) => Self::Sub { rd, rs1, rs2 },
                     (0b111, 0b0000000) => Self::And { rd, rs1, rs2 },
                     (0b110, 0b0000000) => Self::Or { rd, rs1, rs2 },
+                    (0b100, 0b0000000) => Self::Xor { rd, rs1, rs2 },
+                    (0b001, 0b0000000) => Self::Sll { rd, rs1, rs2 },
+                    (0b101, 0b0000000) => Self::Srl { rd, rs1, rs2 },
                     _ => unimplemented!(),
                 }
             }
@@ -167,11 +176,15 @@ impl Instruction {
                 if imm & 0x800 != 0 {
                     imm |= 0xfffff000u32 as i32;
                 }
+                let shamt = (imm & 0x1f) as u8;
 
                 match funct3 {
                     0b000 => Self::Addi { rd, rs1, imm },
                     0b111 => Self::Andi { rd, rs1, imm },
                     0b110 => Self::Ori { rd, rs1, imm },
+                    0b100 => Self::Xori { rd, rs1, imm },
+                    0b001 => Self::Slli { rd, rs1, shamt },
+                    0b101 => Self::Srli { rd, rs1, shamt },
                     _ => unimplemented!(),
                 }
             }

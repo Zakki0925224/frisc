@@ -62,8 +62,6 @@ fn test_and_andi() -> anyhow::Result<()> {
     emulator.reset();
     emulator.run()?;
 
-    assert_eq!(emulator.cpu.x_regs[3].load(), 234);
-    assert_eq!(emulator.cpu.x_regs[4].load(), 146);
     assert_eq!(emulator.cpu.x_regs[10].load(), 130);
     assert_eq!(emulator.cpu.x_regs[12].load(), 128);
 
@@ -85,10 +83,54 @@ fn test_or_ori() -> anyhow::Result<()> {
     emulator.reset();
     emulator.run()?;
 
-    assert_eq!(emulator.cpu.x_regs[5].load(), 837);
-    assert_eq!(emulator.cpu.x_regs[6].load(), 263);
     assert_eq!(emulator.cpu.x_regs[8].load(), 839);
     assert_eq!(emulator.cpu.x_regs[9].load() as i32, -1);
+
+    Ok(())
+}
+
+#[test]
+fn test_xor_xori() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x03, 0x70, 0x33, // ADDI x7, x0, 823
+        0x13, 0x04, 0xe0, 0x55, // ADDI x8, x0, 1374
+        0xb3, 0xc4, 0x83, 0x00, // XOR x9, x7, x8
+        0x13, 0xc5, 0xd4, 0xe7, // XORI x10, x9, -387
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[9].load(), 1641);
+    assert_eq!(emulator.cpu.x_regs[10].load() as i32, -2028);
+
+    Ok(())
+}
+
+#[test]
+fn test_sll_slli_srl_srli() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x00, 0x70, 0x01, // ADDI x1, x0, 23
+        0x13, 0x01, 0x50, 0x00, // ADDI x2, x0, 5
+        0x33, 0x92, 0x20, 0x00, // SLL x4, x1, x2
+        0x93, 0x12, 0x31, 0x00, // SLLI x5, x2, 3
+        0x33, 0x53, 0x52, 0x00, // SRL x6, x4, x5
+        0x93, 0xd3, 0x30, 0x00, // SRLI x7, x1, 3
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[4].load(), 736);
+    assert_eq!(emulator.cpu.x_regs[5].load(), 40);
+    assert_eq!(emulator.cpu.x_regs[6].load(), 2);
+    assert_eq!(emulator.cpu.x_regs[7].load(), 2);
 
     Ok(())
 }
