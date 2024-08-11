@@ -50,8 +50,6 @@ impl Cpu {
         println!("done!");
         println!("{:?}", self);
         println!("{:?}", ram);
-
-        self.pc.increment();
         Ok(())
     }
 
@@ -97,87 +95,106 @@ impl Cpu {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = self.load_x_regs(rs2)?;
                 self.store_x_regs(rd, x_rs1 + x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Addi { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 + imm as i32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Sub { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 let x_rs2 = self.load_x_regs(rs2)? as i32;
                 self.store_x_regs(rd, (x_rs1 - x_rs2) as u32)?;
+                self.pc.increment();
             }
             Instruction::And { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = self.load_x_regs(rs2)?;
                 self.store_x_regs(rd, x_rs1 & x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Andi { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 & imm as i32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Or { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = self.load_x_regs(rs2)?;
                 self.store_x_regs(rd, x_rs1 | x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Ori { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 | imm as i32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Xor { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = self.load_x_regs(rs2)?;
                 self.store_x_regs(rd, x_rs1 ^ x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Xori { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 ^ imm as i32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Sll { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = (self.load_x_regs(rs2)? & 0x1f) as u8;
                 self.store_x_regs(rd, x_rs1 << x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Slli { rd, rs1, shamt } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 self.store_x_regs(rd, x_rs1 << shamt)?;
+                self.pc.increment();
             }
             Instruction::Srl { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = (self.load_x_regs(rs2)? & 0x1f) as u8;
                 self.store_x_regs(rd, x_rs1 >> x_rs2)?;
+                self.pc.increment();
             }
             Instruction::Srli { rd, rs1, shamt } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 self.store_x_regs(rd, x_rs1 >> shamt)?;
+                self.pc.increment();
             }
             Instruction::Sra { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 let x_rs2 = (self.load_x_regs(rs2)? & 0x1f) as u8;
                 self.store_x_regs(rd, (x_rs1 >> x_rs2) as u32)?;
+                self.pc.increment();
             }
             Instruction::Srai { rd, rs1, shamt } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 >> shamt) as u32)?;
+                self.pc.increment();
             }
             Instruction::Slt { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 let x_rs2 = self.load_x_regs(rs2)? as i32;
                 self.store_x_regs(rd, (x_rs1 < x_rs2) as u32)?;
+                self.pc.increment();
             }
             Instruction::Slti { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 < imm as i32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Sltu { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 let x_rs2 = self.load_x_regs(rs2)?;
                 self.store_x_regs(rd, (x_rs1 < x_rs2) as u32)?;
+                self.pc.increment();
             }
             Instruction::Sltiu { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
                 self.store_x_regs(rd, (x_rs1 < imm as u32) as u32)?;
+                self.pc.increment();
             }
             Instruction::Lb { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -191,6 +208,7 @@ impl Cpu {
                     value |= 0xffffff00;
                 }
                 self.store_x_regs(rd, value)?;
+                self.pc.increment();
             }
             Instruction::Lbu { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -201,6 +219,7 @@ impl Cpu {
                 };
                 let value = ram.load8(addr) as u32;
                 self.store_x_regs(rd, value)?;
+                self.pc.increment();
             }
             Instruction::Sb { rs1, rs2, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -211,6 +230,7 @@ impl Cpu {
                 };
                 let value = self.load_x_regs(rs2)? as u8;
                 ram.store8(addr, value);
+                self.pc.increment();
             }
             Instruction::Lh { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -224,6 +244,7 @@ impl Cpu {
                     value |= 0xffff0000;
                 }
                 self.store_x_regs(rd, value)?;
+                self.pc.increment();
             }
             Instruction::Lhu { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -234,6 +255,7 @@ impl Cpu {
                 };
                 let value = ram.load16(addr) as u32;
                 self.store_x_regs(rd, value)?;
+                self.pc.increment();
             }
             Instruction::Sh { rs1, rs2, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -244,6 +266,7 @@ impl Cpu {
                 };
                 let value = self.load_x_regs(rs2)? as u16;
                 ram.store16(addr, value);
+                self.pc.increment();
             }
             Instruction::Lw { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -254,6 +277,7 @@ impl Cpu {
                 };
                 let value = ram.load32(addr);
                 self.store_x_regs(rd, value)?;
+                self.pc.increment();
             }
             Instruction::Sw { rs1, rs2, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -264,6 +288,17 @@ impl Cpu {
                 };
                 let value = self.load_x_regs(rs2)?;
                 ram.store32(addr, value);
+                self.pc.increment();
+            }
+            Instruction::Jal { rd, offset } => {
+                let mut pc = self.pc.load();
+                self.store_x_regs(rd, pc + 4)?;
+                pc = if offset >= 0 {
+                    pc + offset as u32
+                } else {
+                    pc - (-offset) as u32
+                };
+                self.pc.store(pc);
             }
         }
 

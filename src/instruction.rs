@@ -27,6 +27,14 @@ pub enum InstructionFormat {
         rd: u8,
         imm12_31: u32,
     },
+    J {
+        opcode: u8,
+        rd: u8,
+        imm1_10: u16,
+        imm11: u8,
+        imm12_19: u8,
+        imm20: u8,
+    },
 }
 
 impl Into<u32> for InstructionFormat {
@@ -80,6 +88,21 @@ impl Into<u32> for InstructionFormat {
                 rd,
                 imm12_31,
             } => imm12_31 << 12 | (rd as u32) << 7 | opcode as u32,
+            InstructionFormat::J {
+                opcode,
+                rd,
+                imm1_10,
+                imm11,
+                imm12_19,
+                imm20,
+            } => {
+                (imm20 as u32) << 31
+                    | (imm1_10 as u32) << 21
+                    | (imm11 as u32) << 20
+                    | (imm12_19 as u32) << 12
+                    | (rd as u32) << 7
+                    | opcode as u32
+            }
         }
     }
 }
@@ -129,6 +152,21 @@ impl InstructionFormat {
                     imm5_11,
                 }
             }
+            0b1101111 => {
+                let imm1_10 = ((instruction >> 21) & 0x3ff) as u16;
+                let imm11 = ((instruction >> 20) & 0x1) as u8;
+                let imm12_19 = (instruction >> 12) as u8;
+                let imm20 = ((instruction >> 31) & 0x1) as u8;
+
+                Self::J {
+                    opcode,
+                    rd,
+                    imm1_10,
+                    imm11,
+                    imm12_19,
+                    imm20,
+                }
+            }
             _ => return Err(anyhow::anyhow!("Invalid instruction")),
         };
         Ok(format)
@@ -164,6 +202,7 @@ pub enum Instruction {
     Sh { rs1: usize, rs2: usize, offset: i16 },
     Lw { rd: usize, rs1: usize, offset: i16 },
     Sw { rs1: usize, rs2: usize, offset: i16 },
+    Jal { rd: usize, offset: i32 },
 }
 
 impl Instruction {
@@ -256,8 +295,36 @@ impl Instruction {
                     _ => unimplemented!(),
                 }
             }
-            _ => {
+            InstructionFormat::U {
+                opcode: _,
+                rd: _,
+                imm12_31: _,
+            } => {
                 unimplemented!()
+            }
+            InstructionFormat::J {
+                opcode: _,
+                rd,
+                imm1_10,
+                imm11,
+                imm12_19,
+                imm20,
+            } => {
+                let rd = rd as usize;
+                let mut offset = 0u32;
+                offset |= (imm20 as u32) << 20;
+                offset |= (imm12_19 as u32) << 12;
+                offset |= (imm11 as u32) << 11;
+                offset |= (imm1_10 as u32) << 1;
+
+                if offset & 0x00100000 != 0 {
+                    offset |= 0xffe00000;
+                }
+
+                Self::Jal {
+                    rd,
+                    offset: offset as i32,
+                }
             }
         };
         Ok(ins)

@@ -227,3 +227,21 @@ fn test_lw_sw() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_jal() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0xef, 0x00, 0x00, 0x08, // JAL x1, 128
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[1].load(), 4);
+    assert_eq!(emulator.cpu.pc.load(), 128);
+
+    Ok(())
+}
