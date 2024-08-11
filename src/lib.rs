@@ -134,3 +134,26 @@ fn test_sll_slli_srl_srli() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_sra_srai() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x00, 0xf0, 0xff, // ADDI x1, x0, -1
+        0x13, 0x01, 0x40, 0x00, // ADDI x2, x0, 4
+        0xb3, 0xd1, 0x20, 0x40, // SRA x3, x1, x2
+        0x13, 0xd2, 0xb0, 0x40, // SRAI x4, x1, 11
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[1].load() as i32, -1);
+    assert_eq!(emulator.cpu.x_regs[2].load(), 4);
+    assert_eq!(emulator.cpu.x_regs[3].load() as i32, -1);
+    assert_eq!(emulator.cpu.x_regs[4].load() as i32, -1);
+
+    Ok(())
+}
