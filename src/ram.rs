@@ -66,6 +66,19 @@ impl Ram {
         self.0[addr as usize] = value;
     }
 
+    pub fn load16(&self, addr: u32) -> u16 {
+        let data1 = self.load8(addr);
+        let data2 = self.load8(addr + 1);
+
+        // little endian
+        (data1 as u16) | ((data2 as u16) << 8)
+    }
+
+    pub fn store16(&mut self, addr: u32, value: u16) {
+        self.store8(addr, (value & 0xff) as u8);
+        self.store8(addr + 1, (value >> 8) as u8);
+    }
+
     pub fn load32(&self, addr: u32) -> u32 {
         let data1 = self.load8(addr);
         let data2 = self.load8(addr + 1);
@@ -74,6 +87,13 @@ impl Ram {
 
         // little endian
         (data1 as u32) | ((data2 as u32) << 8) | ((data3 as u32) << 16) | ((data4 as u32) << 24)
+    }
+
+    pub fn store32(&mut self, addr: u32, value: u32) {
+        self.store8(addr, (value & 0xff) as u8);
+        self.store8(addr + 1, (value >> 8) as u8);
+        self.store8(addr + 2, (value >> 16) as u8);
+        self.store8(addr + 3, (value >> 24) as u8);
     }
 
     pub fn size(&self) -> usize {

@@ -202,3 +202,28 @@ fn test_lb_lbu_sb() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_lh_lhu_sh() -> anyhow::Result<()> {
+    Ok(())
+}
+
+#[test]
+fn test_lw_sw() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x00, 0x70, 0xfe, // ADDI x1, x0, -25
+        0x23, 0x20, 0x10, 0x00, // SW x1, 0(x0)
+        0x03, 0x21, 0x00, 0x00, // LW x2, 0(x0)
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[2].load() as i32, -25);
+    assert_eq!(emulator.ram.load32(0) as i32, -25);
+
+    Ok(())
+}

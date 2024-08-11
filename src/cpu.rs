@@ -212,6 +212,59 @@ impl Cpu {
                 let value = self.load_x_regs(rs2)? as u8;
                 ram.store8(addr, value);
             }
+            Instruction::Lh { rd, rs1, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let mut value = ram.load16(addr) as u32;
+                if value & 0x8000 != 0 {
+                    value |= 0xffff0000;
+                }
+                self.store_x_regs(rd, value)?;
+            }
+            Instruction::Lhu { rd, rs1, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = ram.load16(addr) as u32;
+                self.store_x_regs(rd, value)?;
+            }
+            Instruction::Sh { rs1, rs2, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = self.load_x_regs(rs2)? as u16;
+                ram.store16(addr, value);
+            }
+            Instruction::Lw { rd, rs1, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = ram.load32(addr);
+                self.store_x_regs(rd, value)?;
+            }
+            Instruction::Sw { rs1, rs2, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = self.load_x_regs(rs2)?;
+                ram.store32(addr, value);
+            }
         }
 
         Ok(())

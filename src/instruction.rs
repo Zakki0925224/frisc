@@ -159,6 +159,11 @@ pub enum Instruction {
     Lb { rd: usize, rs1: usize, offset: i16 },
     Lbu { rd: usize, rs1: usize, offset: i16 },
     Sb { rs1: usize, rs2: usize, offset: i16 },
+    Lh { rd: usize, rs1: usize, offset: i16 },
+    Lhu { rd: usize, rs1: usize, offset: i16 },
+    Sh { rs1: usize, rs2: usize, offset: i16 },
+    Lw { rd: usize, rs1: usize, offset: i16 },
+    Sw { rs1: usize, rs2: usize, offset: i16 },
 }
 
 impl Instruction {
@@ -222,6 +227,9 @@ impl Instruction {
                     },
                     (0b0000011, 0b000, _) => Self::Lb { rd, rs1, offset },
                     (0b0000011, 0b100, _) => Self::Lbu { rd, rs1, offset },
+                    (0b0000011, 0b001, _) => Self::Lh { rd, rs1, offset },
+                    (0b0000011, 0b101, _) => Self::Lhu { rd, rs1, offset },
+                    (0b0000011, 0b010, _) => Self::Lw { rd, rs1, offset },
                     _ => unimplemented!(),
                 }
             }
@@ -243,6 +251,8 @@ impl Instruction {
 
                 match funct3 {
                     0b000 => Self::Sb { rs1, rs2, offset },
+                    0b001 => Self::Sh { rs1, rs2, offset },
+                    0b010 => Self::Sw { rs1, rs2, offset },
                     _ => unimplemented!(),
                 }
             }
