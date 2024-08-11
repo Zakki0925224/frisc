@@ -137,6 +137,10 @@ pub enum Instruction {
     Srli { rd: usize, rs1: usize, shamt: u8 },
     Sra { rd: usize, rs1: usize, rs2: usize },
     Srai { rd: usize, rs1: usize, shamt: u8 },
+    Slt { rd: usize, rs1: usize, rs2: usize },
+    Slti { rd: usize, rs1: usize, imm: i32 },
+    Sltu { rd: usize, rs1: usize, rs2: usize },
+    Sltiu { rd: usize, rs1: usize, imm: u32 },
 }
 
 impl Instruction {
@@ -163,6 +167,8 @@ impl Instruction {
                     (0b001, 0b0000000) => Self::Sll { rd, rs1, rs2 },
                     (0b101, 0b0000000) => Self::Srl { rd, rs1, rs2 },
                     (0b101, 0b0100000) => Self::Sra { rd, rs1, rs2 },
+                    (0b010, 0b0000000) => Self::Slt { rd, rs1, rs2 },
+                    (0b011, 0b0000000) => Self::Sltu { rd, rs1, rs2 },
                     _ => unimplemented!(),
                 }
             }
@@ -189,6 +195,12 @@ impl Instruction {
                     (0b001, _) => Self::Slli { rd, rs1, shamt },
                     (0b101, 0b0100000) => Self::Srai { rd, rs1, shamt },
                     (0b101, _) => Self::Srli { rd, rs1, shamt },
+                    (0b010, _) => Self::Slti { rd, rs1, imm },
+                    (0b011, _) => Self::Sltiu {
+                        rd,
+                        rs1,
+                        imm: imm0_11 as u32,
+                    },
                     _ => unimplemented!(),
                 }
             }

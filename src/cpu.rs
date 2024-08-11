@@ -160,6 +160,24 @@ impl Cpu {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
                 self.store_x_regs(rd, (x_rs1 >> shamt) as u32)?;
             }
+            Instruction::Slt { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                let x_rs2 = self.load_x_regs(rs2)? as i32;
+                self.store_x_regs(rd, (x_rs1 < x_rs2) as u32)?;
+            }
+            Instruction::Slti { rd, rs1, imm } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                self.store_x_regs(rd, (x_rs1 < imm) as u32)?;
+            }
+            Instruction::Sltu { rd, rs1, rs2 } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                self.store_x_regs(rd, (x_rs1 < x_rs2) as u32)?;
+            }
+            Instruction::Sltiu { rd, rs1, imm } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                self.store_x_regs(rd, (x_rs1 < imm) as u32)?;
+            }
         }
 
         Ok(())

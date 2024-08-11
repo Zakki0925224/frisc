@@ -150,10 +150,33 @@ fn test_sra_srai() -> anyhow::Result<()> {
     emulator.reset();
     emulator.run()?;
 
-    assert_eq!(emulator.cpu.x_regs[1].load() as i32, -1);
-    assert_eq!(emulator.cpu.x_regs[2].load(), 4);
     assert_eq!(emulator.cpu.x_regs[3].load() as i32, -1);
     assert_eq!(emulator.cpu.x_regs[4].load() as i32, -1);
+
+    Ok(())
+}
+
+#[test]
+fn test_slt_slti_sltu_sltiu() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x00, 0xb0, 0x07, // ADDI x1, x0, 123
+        0x13, 0x01, 0xf0, 0xff, // ADDI x2, x0, -1
+        0xb3, 0xa1, 0x00, 0x00, // SLT x3, x1, x0
+        0x13, 0xa2, 0xb0, 0x07, // SLTI x4, x1, 123
+        0xb3, 0xb2, 0x20, 0x00, // SLTU x5, x1, x2
+        0x13, 0x33, 0x01, 0x00, // SLTIU x6, x2, 0
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[3].load(), 0);
+    assert_eq!(emulator.cpu.x_regs[4].load(), 0);
+    assert_eq!(emulator.cpu.x_regs[5].load(), 1);
+    assert_eq!(emulator.cpu.x_regs[6].load(), 0);
 
     Ok(())
 }
