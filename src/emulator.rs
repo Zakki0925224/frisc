@@ -16,7 +16,7 @@ impl Emulator {
 
     pub fn run(&mut self) -> anyhow::Result<()> {
         loop {
-            self.cpu.fetch_decode_execute(&self.ram)?;
+            self.cpu.fetch_decode_execute(&mut self.ram)?;
             if self.cpu.pc.load() as usize >= self.ram.size() {
                 break;
             }

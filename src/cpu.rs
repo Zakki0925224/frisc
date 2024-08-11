@@ -36,7 +36,7 @@ impl Cpu {
         self.state = CpuState::Reset;
     }
 
-    pub fn fetch_decode_execute(&mut self, ram: &Ram) -> anyhow::Result<()> {
+    pub fn fetch_decode_execute(&mut self, ram: &mut Ram) -> anyhow::Result<()> {
         print!("fetching ...");
         let instruction = self.fetch(ram)?;
         println!("0x{:08x}", instruction);
@@ -49,6 +49,7 @@ impl Cpu {
         self.execute(ram, decoded_instruction)?;
         println!("done!");
         println!("{:?}", self);
+        println!("{:?}", ram);
 
         self.pc.increment();
         Ok(())
@@ -67,7 +68,7 @@ impl Cpu {
             return Err(anyhow::anyhow!("PC is out of bounds memory"));
         }
 
-        let instruction = ram.read32(pc);
+        let instruction = ram.load32(pc);
         Ok(instruction)
     }
 
@@ -83,7 +84,7 @@ impl Cpu {
         Ok(parsed_instruction)
     }
 
-    fn execute(&mut self, _ram: &Ram, instruction: Instruction) -> anyhow::Result<()> {
+    fn execute(&mut self, ram: &mut Ram, instruction: Instruction) -> anyhow::Result<()> {
         match self.state {
             CpuState::Decode => (),
             _ => return Err(anyhow::anyhow!("Invalid state for execute")),
@@ -99,7 +100,7 @@ impl Cpu {
             }
             Instruction::Addi { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
-                self.store_x_regs(rd, (x_rs1 + imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 + imm as i32) as u32)?;
             }
             Instruction::Sub { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
@@ -113,7 +114,7 @@ impl Cpu {
             }
             Instruction::Andi { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
-                self.store_x_regs(rd, (x_rs1 & imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 & imm as i32) as u32)?;
             }
             Instruction::Or { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
@@ -122,7 +123,7 @@ impl Cpu {
             }
             Instruction::Ori { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
-                self.store_x_regs(rd, (x_rs1 | imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 | imm as i32) as u32)?;
             }
             Instruction::Xor { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
@@ -131,7 +132,7 @@ impl Cpu {
             }
             Instruction::Xori { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
-                self.store_x_regs(rd, (x_rs1 ^ imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 ^ imm as i32) as u32)?;
             }
             Instruction::Sll { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
@@ -167,7 +168,7 @@ impl Cpu {
             }
             Instruction::Slti { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)? as i32;
-                self.store_x_regs(rd, (x_rs1 < imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 < imm as i32) as u32)?;
             }
             Instruction::Sltu { rd, rs1, rs2 } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
@@ -176,7 +177,40 @@ impl Cpu {
             }
             Instruction::Sltiu { rd, rs1, imm } => {
                 let x_rs1 = self.load_x_regs(rs1)?;
-                self.store_x_regs(rd, (x_rs1 < imm) as u32)?;
+                self.store_x_regs(rd, (x_rs1 < imm as u32) as u32)?;
+            }
+            Instruction::Lb { rd, rs1, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let mut value = ram.load8(addr) as u32;
+                if value & 0x80 != 0 {
+                    value |= 0xffffff00;
+                }
+                self.store_x_regs(rd, value)?;
+            }
+            Instruction::Lbu { rd, rs1, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = ram.load8(addr) as u32;
+                self.store_x_regs(rd, value)?;
+            }
+            Instruction::Sb { rs1, rs2, offset } => {
+                let mut addr = self.load_x_regs(rs1)?;
+                addr = if offset >= 0 {
+                    addr + offset as u32
+                } else {
+                    addr - (-offset) as u32
+                };
+                let value = self.load_x_regs(rs2)? as u8;
+                ram.store8(addr, value);
             }
         }
 

@@ -180,3 +180,25 @@ fn test_slt_slti_sltu_sltiu() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_lb_lbu_sb() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    let ram_data = vec![
+        0x93, 0x00, 0x70, 0xfe, // ADDI x1, x0, -25
+        0x23, 0x00, 0x10, 0x00, // SB x1, 0(x0)
+        0x03, 0x01, 0x00, 0x00, // LB x2, 0(x0)
+        0x83, 0x41, 0x00, 0x00, // LBU x3, 0(x0)
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.reset();
+    emulator.run()?;
+
+    assert_eq!(emulator.cpu.x_regs[2].load() as i32, -25);
+    assert_eq!(emulator.cpu.x_regs[3].load(), 231);
+    assert_eq!(emulator.ram.load8(0), 231);
+
+    Ok(())
+}
