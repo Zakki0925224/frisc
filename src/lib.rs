@@ -204,11 +204,6 @@ fn test_lb_lbu_sb() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_lh_lhu_sh() -> anyhow::Result<()> {
-    Ok(())
-}
-
-#[test]
 fn test_lw_sw() -> anyhow::Result<()> {
     use emulator::Emulator;
 

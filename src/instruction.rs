@@ -22,6 +22,16 @@ pub enum InstructionFormat {
         rs2: u8,
         imm5_11: u8,
     },
+    B {
+        opcode: u8,
+        funct3: u8,
+        rs1: u8,
+        rs2: u8,
+        imm1_4: u8,
+        imm5_10: u8,
+        imm11: u8,
+        imm12: u8,
+    },
     U {
         opcode: u8,
         rd: u8,
@@ -35,6 +45,7 @@ pub enum InstructionFormat {
         imm12_19: u8,
         imm20: u8,
     },
+    None(u32),
 }
 
 impl Into<u32> for InstructionFormat {
@@ -83,6 +94,25 @@ impl Into<u32> for InstructionFormat {
                     | (imm0_4 as u32 & 0x1f) << 7
                     | opcode as u32
             }
+            InstructionFormat::B {
+                opcode,
+                funct3,
+                rs1,
+                rs2,
+                imm1_4,
+                imm5_10,
+                imm11,
+                imm12,
+            } => {
+                (imm12 as u32) << 31
+                    | (imm5_10 as u32) << 25
+                    | (rs2 as u32) << 20
+                    | (rs1 as u32) << 15
+                    | (funct3 as u32) << 12
+                    | (imm1_4 as u32) << 8
+                    | (imm11 as u32) << 7
+                    | opcode as u32
+            }
             InstructionFormat::U {
                 opcode,
                 rd,
@@ -103,6 +133,7 @@ impl Into<u32> for InstructionFormat {
                     | (rd as u32) << 7
                     | opcode as u32
             }
+            InstructionFormat::None(i) => i,
         }
     }
 }
@@ -128,7 +159,7 @@ impl InstructionFormat {
                     funct7,
                 }
             }
-            0b0010011 | 0b0000011 => {
+            0b0010011 | 0b0000011 | 0b1100111 => {
                 let imm0_11 = ((instruction >> 20) & 0xfff) as u16;
 
                 Self::I {
@@ -152,6 +183,32 @@ impl InstructionFormat {
                     imm5_11,
                 }
             }
+            0b1100011 => {
+                let imm1_4 = rd;
+                let imm5_10 = ((instruction >> 25) & 0x3f) as u8;
+                let imm11 = ((instruction >> 7) & 0x1) as u8;
+                let imm12 = ((instruction >> 31) & 0x1) as u8;
+
+                Self::B {
+                    opcode,
+                    funct3,
+                    rs1,
+                    rs2,
+                    imm1_4,
+                    imm5_10,
+                    imm11,
+                    imm12,
+                }
+            }
+            0b110111 | 0b0010111 => {
+                let imm12_31 = (instruction >> 12) as u32;
+
+                Self::U {
+                    opcode,
+                    rd,
+                    imm12_31,
+                }
+            }
             0b1101111 => {
                 let imm1_10 = ((instruction >> 21) & 0x3ff) as u16;
                 let imm11 = ((instruction >> 20) & 0x1) as u8;
@@ -167,6 +224,7 @@ impl InstructionFormat {
                     imm20,
                 }
             }
+            0b0001111 | 0b1110011 => Self::None(instruction),
             _ => return Err(anyhow::anyhow!("Invalid instruction")),
         };
         Ok(format)
@@ -203,6 +261,18 @@ pub enum Instruction {
     Lw { rd: usize, rs1: usize, offset: i16 },
     Sw { rs1: usize, rs2: usize, offset: i16 },
     Jal { rd: usize, offset: i32 },
+    Jalr { rd: usize, rs1: usize, offset: i16 },
+    Beq { rs1: usize, rs2: usize, offset: i16 },
+    Bne { rs1: usize, rs2: usize, offset: i16 },
+    Blt { rs1: usize, rs2: usize, offset: i16 },
+    Bge { rs1: usize, rs2: usize, offset: i16 },
+    Bltu { rs1: usize, rs2: usize, offset: i16 },
+    Bgeu { rs1: usize, rs2: usize, offset: i16 },
+    Lui { rd: usize, imm: u32 },
+    Auipc { rd: usize, imm: u32 },
+    Fence { pred: u8, succ: u8 },
+    Ecall,
+    Ebreak,
 }
 
 impl Instruction {
@@ -231,7 +301,7 @@ impl Instruction {
                     (0b101, 0b0100000) => Self::Sra { rd, rs1, rs2 },
                     (0b010, 0b0000000) => Self::Slt { rd, rs1, rs2 },
                     (0b011, 0b0000000) => Self::Sltu { rd, rs1, rs2 },
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
                 }
             }
             InstructionFormat::I {
@@ -269,7 +339,8 @@ impl Instruction {
                     (0b0000011, 0b001, _) => Self::Lh { rd, rs1, offset },
                     (0b0000011, 0b101, _) => Self::Lhu { rd, rs1, offset },
                     (0b0000011, 0b010, _) => Self::Lw { rd, rs1, offset },
-                    _ => unimplemented!(),
+                    (0b1100111, 0b000, _) => Self::Jalr { rd, rs1, offset },
+                    _ => unreachable!(),
                 }
             }
             InstructionFormat::S {
@@ -282,25 +353,61 @@ impl Instruction {
             } => {
                 let rs1 = rs1 as usize;
                 let rs2 = rs2 as usize;
-                let mut imm = (((imm5_11 as u16) << 5) | ((imm0_4 as u16) & 0x1f)) as i16;
-                if imm & 0x800 != 0 {
-                    imm |= 0xf000u16 as i16;
+                let mut offset = (((imm5_11 as u16) << 5) | ((imm0_4 as u16) & 0x1f)) as i16;
+                if offset & 0x800 != 0 {
+                    offset |= 0xf000u16 as i16;
                 }
-                let offset = imm;
 
                 match funct3 {
                     0b000 => Self::Sb { rs1, rs2, offset },
                     0b001 => Self::Sh { rs1, rs2, offset },
                     0b010 => Self::Sw { rs1, rs2, offset },
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
+                }
+            }
+            InstructionFormat::B {
+                opcode: _,
+                funct3,
+                rs1,
+                rs2,
+                imm1_4,
+                imm5_10,
+                imm11,
+                imm12,
+            } => {
+                let rs1 = rs1 as usize;
+                let rs2 = rs2 as usize;
+                let mut offset = ((imm12 as u16) << 12
+                    | ((imm11 as u16) & 0x1) << 11
+                    | ((imm5_10 as u16) & 0x3f) << 5
+                    | ((imm1_4 as u16) & 0x1e)) as i16;
+                if offset & 0x800 != 0 {
+                    offset |= 0xf000u16 as i16;
+                }
+
+                match funct3 {
+                    0b000 => Self::Beq { rs1, rs2, offset },
+                    0b001 => Self::Bne { rs1, rs2, offset },
+                    0b100 => Self::Blt { rs1, rs2, offset },
+                    0b101 => Self::Bge { rs1, rs2, offset },
+                    0b110 => Self::Bltu { rs1, rs2, offset },
+                    0b111 => Self::Bgeu { rs1, rs2, offset },
+                    _ => unreachable!(),
                 }
             }
             InstructionFormat::U {
-                opcode: _,
-                rd: _,
-                imm12_31: _,
+                opcode,
+                rd,
+                imm12_31,
             } => {
-                unimplemented!()
+                let rd = rd as usize;
+                let imm = (imm12_31 << 12) as u32;
+
+                match opcode {
+                    0b0110111 => Self::Lui { rd, imm },
+                    0b0010111 => Self::Auipc { rd, imm },
+                    _ => unreachable!(),
+                }
             }
             InstructionFormat::J {
                 opcode: _,
@@ -324,6 +431,17 @@ impl Instruction {
                 Self::Jal {
                     rd,
                     offset: offset as i32,
+                }
+            }
+            InstructionFormat::None(i) => {
+                let opcode = i & 0x7f;
+                let pred = ((i >> 27) & 0x7) as u8;
+                let succ = ((i >> 20) & 0x7) as u8;
+                match (opcode, succ) {
+                    (0b0001111, _) => Self::Fence { pred, succ },
+                    (0b1110011, 0) => Self::Ecall,
+                    (0b1110011, 1) => Self::Ebreak,
+                    _ => unreachable!(),
                 }
             }
         };

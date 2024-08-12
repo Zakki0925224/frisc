@@ -300,6 +300,130 @@ impl Cpu {
                 };
                 self.pc.store(pc);
             }
+            Instruction::Jalr { rd, rs1, offset } => {
+                let t = self.pc.load() + 4;
+                let mut pc = self.load_x_regs(rs1)?;
+                pc = if offset >= 0 {
+                    pc + offset as u32
+                } else {
+                    pc - (-offset) as u32
+                };
+                pc &= !1;
+                self.pc.store(pc);
+                self.store_x_regs(rd, t)?;
+            }
+            Instruction::Beq { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 == x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Bne { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 != x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Blt { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                let x_rs2 = self.load_x_regs(rs2)? as i32;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 < x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Bge { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)? as i32;
+                let x_rs2 = self.load_x_regs(rs2)? as i32;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 >= x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Bltu { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 < x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Bgeu { rs1, rs2, offset } => {
+                let x_rs1 = self.load_x_regs(rs1)?;
+                let x_rs2 = self.load_x_regs(rs2)?;
+                let mut pc = self.pc.load();
+                pc = if x_rs1 >= x_rs2 {
+                    if offset >= 0 {
+                        pc + offset as u32
+                    } else {
+                        pc - (-offset) as u32
+                    }
+                } else {
+                    pc + 4
+                };
+                self.pc.store(pc);
+            }
+            Instruction::Lui { rd, imm } => {
+                self.store_x_regs(rd, imm)?;
+                self.pc.increment();
+            }
+            Instruction::Auipc { rd, imm } => {
+                let pc = self.pc.load() + imm;
+                self.store_x_regs(rd, pc)?;
+                self.pc.increment();
+            }
+            Instruction::Fence { pred, succ } => {
+                return Err(anyhow::anyhow!(
+                    "Fence (pred: 0x{:x}, succ: 0x{:x})",
+                    pred,
+                    succ
+                ));
+            }
+            Instruction::Ecall => {
+                return Err(anyhow::anyhow!("Ecall"));
+            }
+            Instruction::Ebreak => {
+                return Err(anyhow::anyhow!("Ebreak"));
+            }
         }
 
         Ok(())
