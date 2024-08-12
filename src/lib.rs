@@ -240,3 +240,45 @@ fn test_jal() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_hello() -> anyhow::Result<()> {
+    use emulator::Emulator;
+
+    // hello.c
+    // void _start()
+    // {
+    //     volatile char *addr = (volatile char *)0x123;
+    //     *addr = 'A';
+    // }
+    // clang --target=riscv32 -march=rv32i -mabi=ilp32 -nostdlib -o hello.elf hello.c
+
+    let hello_elf = &[
+        0x13, 0x01, 0x01, 0xff, // ADDI sp, sp, -16
+        0x23, 0x26, 0x11, 0x00, // SW ra, 12(sp)
+        0x23, 0x24, 0x81, 0x00, // SW s0, 8(sp)
+        0x13, 0x04, 0x01, 0x01, // ADDI s0, sp, 16
+        0x13, 0x05, 0x30, 0x12, // LI a0, 291
+        0x23, 0x2a, 0xa4, 0xfe, // SW a0, -12(s0)
+        0x83, 0x25, 0x44, 0xff, // LW a1, -12(s0)
+        0x13, 0x05, 0x10, 0x04, // LI a0, 65
+        0x23, 0x80, 0xa5, 0x00, // SB a0, 0(a1)
+        0x83, 0x20, 0xc1, 0x00, // LW ra, 12(sp)
+        0x03, 0x24, 0x81, 0x00, // LW s0, 8(sp)
+        0x13, 0x01, 0x01, 0x01, // ADDI sp, sp, 16
+        //0x67, 0x80, 0x00, 0x00, // ret
+        0x73, 0x00, 0x10, 0x00, // EBREAK
+    ];
+
+    let mut ram = vec![0u8; 0x200000];
+    ram[..hello_elf.len()].copy_from_slice(hello_elf);
+
+    let mut emulator = Emulator::new(ram);
+    emulator.reset();
+    emulator.cpu.x_regs[2].store(0x1000); // sp
+    let _ = emulator.run();
+
+    assert_eq!(emulator.ram.load8(0x123), 65); // A
+
+    Ok(())
+}

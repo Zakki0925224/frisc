@@ -49,7 +49,6 @@ impl Cpu {
         self.execute(ram, decoded_instruction)?;
         println!("done!");
         println!("{:?}", self);
-        println!("{:?}", ram);
         Ok(())
     }
 

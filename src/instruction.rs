@@ -87,7 +87,7 @@ impl Into<u32> for InstructionFormat {
                 rs2,
                 imm5_11,
             } => {
-                (imm5_11 as u32 >> 5) << 25
+                (imm5_11 as u32) << 25
                     | (rs2 as u32) << 20
                     | (rs1 as u32) << 15
                     | (funct3 as u32) << 12
@@ -172,7 +172,7 @@ impl InstructionFormat {
             }
             0b0100011 => {
                 let imm0_4 = rd;
-                let imm5_11 = ((instruction >> 25) & 0x3f) as u8;
+                let imm5_11 = ((instruction >> 25) & 0x7f) as u8;
 
                 Self::S {
                     opcode,
@@ -354,9 +354,7 @@ impl Instruction {
                 let rs1 = rs1 as usize;
                 let rs2 = rs2 as usize;
                 let mut offset = (((imm5_11 as u16) << 5) | ((imm0_4 as u16) & 0x1f)) as i16;
-                if offset & 0x800 != 0 {
-                    offset |= 0xf000u16 as i16;
-                }
+                offset = (offset << 4) >> 4;
 
                 match funct3 {
                     0b000 => Self::Sb { rs1, rs2, offset },
