@@ -4,7 +4,7 @@ use crate::mmio_device::MmioDeviceInterface;
 
 pub const DEFAULT_RAM_SIZE: u32 = 1024 * 1024; // 1MB
 
-pub struct Ram(Vec<u8>);
+pub struct Ram(pub Vec<u8>);
 
 impl Debug for Ram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

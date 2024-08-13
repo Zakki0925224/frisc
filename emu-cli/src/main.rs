@@ -3,7 +3,10 @@ use frisc::{
     emulator::Emulator,
     mmio_device::{debug_exit::DebugExit, simple_uart::SimpleUart},
 };
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::Write,
+};
 use xmas_elf::{
     header,
     program::{self, SegmentData},
@@ -15,6 +18,8 @@ use xmas_elf::{
 struct Args {
     #[arg(long)]
     program_path: String,
+    #[arg(long)]
+    step_log_path: Option<String>,
     #[arg(long)]
     ram_size: Option<usize>,
     #[arg(long)]
@@ -61,7 +66,8 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let mut ram = vec![0u8; args.ram_size.unwrap_or(max_ram_size) + default_stack_size];
+    // 4 bytes alignment
+    let mut ram = vec![0u8; (args.ram_size.unwrap_or(max_ram_size) + default_stack_size + 3) & !3];
     for ph in loadable_phs {
         let offset = ph.virtual_addr() as usize;
         let size = ph.mem_size() as usize;
@@ -81,8 +87,14 @@ fn main() -> anyhow::Result<()> {
     emulator.reset();
     emulator.cpu.pc.store(default_pc); // pc
     emulator.cpu.x_regs[2].store(default_sp); // sp
-    let exit_code = emulator.run()?;
+    let (exit_code, log) = emulator.run()?;
     println!("Exited with 0x{:x}", exit_code);
+
+    if let Some(step_log_path) = args.step_log_path {
+        let s = serde_json::to_string(&log)?;
+        let mut file = File::create(step_log_path)?;
+        file.write_all(s.as_bytes())?;
+    }
 
     Ok(())
 }

@@ -4,6 +4,7 @@ pub mod instruction;
 pub mod mmio_device;
 pub mod ram;
 pub mod register;
+pub mod step_log;
 
 #[test]
 fn test_add_addi() -> anyhow::Result<()> {
@@ -299,7 +300,7 @@ fn test_debug_exit() -> anyhow::Result<()> {
     let mut emulator = Emulator::new(ram_data);
     emulator.register_mmio_device(Box::new(DebugExit::default()));
     emulator.reset();
-    let exit_code = emulator.run()?;
+    let (exit_code, _) = emulator.run()?;
 
     assert_eq!(exit_code, 0xae);
 

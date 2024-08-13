@@ -2,6 +2,7 @@ use crate::{
     cpu::Cpu,
     mmio_device::{MmioDeviceInterface, RequestFromDevice},
     ram::Ram,
+    step_log,
 };
 use std::fmt::Debug;
 
@@ -34,17 +35,29 @@ impl Emulator {
         self.mmio_devices.push(device);
     }
 
-    pub fn run(&mut self) -> anyhow::Result<u8> {
+    pub fn run(&mut self) -> anyhow::Result<(u8, step_log::Log)> {
+        let mut log = step_log::Log {
+            init_cpu_state: step_log::CpuStateLog::new(&self.cpu),
+            init_ram: self.ram.0.clone(),
+            steps: Vec::new(),
+            dev_reqs: Vec::new(),
+        };
+
         let mut exit_code = 0;
 
         'a: loop {
             for mmio_device in &mut self.mmio_devices {
-                let request = match mmio_device.poll_request() {
+                let req = match mmio_device.poll_request() {
                     Some(request) => request,
                     None => continue,
                 };
 
-                match request {
+                log.dev_reqs.push(step_log::DeviceRequest {
+                    step: self.cpu.step,
+                    req: req.clone(),
+                });
+
+                match req {
                     RequestFromDevice::Exit(exit_code_) => {
                         exit_code = exit_code_;
                         break 'a;
@@ -52,14 +65,17 @@ impl Emulator {
                 }
             }
 
-            self.cpu
+            let step_log = self
+                .cpu
                 .fetch_decode_execute(&mut self.ram, &mut self.mmio_devices)?;
+            log.steps.push(step_log);
+
             if self.cpu.pc.load() as usize >= self.ram.size() {
                 break;
             }
         }
 
-        Ok(exit_code)
+        Ok((exit_code, log))
     }
 
     pub fn reset(&mut self) {

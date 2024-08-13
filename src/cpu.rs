@@ -1,13 +1,14 @@
-use colored::Colorize;
+use serde::Serialize;
 
 use crate::{
     instruction::{Instruction, InstructionFormat},
     mmio_device::MmioDeviceInterface,
     ram::Ram,
     register::{ProgramCounter, Register},
+    step_log,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum CpuState {
     Reset,
     Fetch,
@@ -20,6 +21,7 @@ pub struct Cpu {
     pub x_regs: [Register; 32],
     pub pc: ProgramCounter,
     pub state: CpuState,
+    pub step: usize,
 }
 
 impl Default for Cpu {
@@ -28,6 +30,7 @@ impl Default for Cpu {
             x_regs: [Register::default(); 32],
             pc: ProgramCounter::default(),
             state: CpuState::Reset,
+            step: 0,
         }
     }
 }
@@ -37,25 +40,27 @@ impl Cpu {
         self.x_regs = [Register::default(); 32];
         self.pc = ProgramCounter::default();
         self.state = CpuState::Reset;
+        self.step = 0;
     }
 
     pub fn fetch_decode_execute(
         &mut self,
         ram: &mut Ram,
         mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
-    ) -> anyhow::Result<()> {
-        print!("{}", "fetching ...".green());
-        let instruction = self.fetch(ram)?;
-        println!("{}", format!("0x{:08x}", instruction).green());
+    ) -> anyhow::Result<step_log::CpuStep> {
+        let fetched_instruction = self.fetch(ram)?;
+        let decoded_instruction = self.decode(fetched_instruction)?;
+        let ram_writes = self.execute(decoded_instruction, ram, mmio_devices)?;
 
-        print!("{}", "decoding ...".green());
-        let decoded_instruction = self.decode(instruction)?;
-        println!("{}", format!("{:?}", decoded_instruction).green());
-
-        print!("{}", "executing...".green());
-        self.execute(decoded_instruction, ram, mmio_devices)?;
-        println!("{}", format!("{:?}", self).green());
-        Ok(())
+        let cpu_step = step_log::CpuStep {
+            step: self.step,
+            fetched_instruction,
+            decoded_instruction,
+            cpu_state: step_log::CpuStateLog::new(&self),
+            ram_writes,
+        };
+        self.step += 1;
+        Ok(cpu_step)
     }
 
     fn fetch(&mut self, ram: &Ram) -> anyhow::Result<u32> {
@@ -92,13 +97,14 @@ impl Cpu {
         instruction: Instruction,
         ram: &mut Ram,
         mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Vec<step_log::RamWrite>> {
         match self.state {
             CpuState::Decode => (),
             _ => return Err(anyhow::anyhow!("Invalid state for execute")),
         }
 
         self.state = CpuState::Execute;
+        let mut ram_write_logs = Vec::new();
 
         match instruction {
             Instruction::Add { rd, rs1, rs2 } => {
@@ -241,6 +247,8 @@ impl Cpu {
                 let value = self.load_x_regs(rs2)? as u8;
                 ram.store8_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
+
+                ram_write_logs.push(step_log::RamWrite::new(addr, value))
             }
             Instruction::Lh { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -277,6 +285,10 @@ impl Cpu {
                 let value = self.load_x_regs(rs2)? as u16;
                 ram.store16_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
+
+                let values = value.to_le_bytes();
+                ram_write_logs.push(step_log::RamWrite::new(addr, values[0]));
+                ram_write_logs.push(step_log::RamWrite::new(addr + 1, values[1]));
             }
             Instruction::Lw { rd, rs1, offset } => {
                 let mut addr = self.load_x_regs(rs1)?;
@@ -299,6 +311,12 @@ impl Cpu {
                 let value = self.load_x_regs(rs2)?;
                 ram.store32_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
+
+                let values = value.to_le_bytes();
+                ram_write_logs.push(step_log::RamWrite::new(addr, values[0]));
+                ram_write_logs.push(step_log::RamWrite::new(addr + 1, values[1]));
+                ram_write_logs.push(step_log::RamWrite::new(addr + 2, values[2]));
+                ram_write_logs.push(step_log::RamWrite::new(addr + 3, values[3]));
             }
             Instruction::Jal { rd, offset } => {
                 let mut pc = self.pc.load();
@@ -436,7 +454,7 @@ impl Cpu {
             }
         }
 
-        Ok(())
+        Ok(ram_write_logs)
     }
 
     fn load_x_regs(&mut self, index: usize) -> anyhow::Result<u32> {

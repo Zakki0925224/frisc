@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 pub mod debug_exit;
 pub mod simple_uart;
 
@@ -8,6 +10,7 @@ pub struct MmioDeviceBase {
     pub used_mem_bytes_len: usize,
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub enum RequestFromDevice {
     Exit(u8),
 }

@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 pub enum InstructionFormat {
     R {
         opcode: u8,
@@ -231,7 +233,7 @@ impl InstructionFormat {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum Instruction {
     Add { rd: usize, rs1: usize, rs2: usize },
     Addi { rd: usize, rs1: usize, imm: i16 },
