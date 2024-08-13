@@ -1,4 +1,4 @@
-SRC_FILES := hello.c
+SRC_FILES := hello.c ../debug_exit.c ../uart.c
 OBJ_FILES := $(SRC_FILES:.c=.o)
 OUT_FILE := hello.elf
 

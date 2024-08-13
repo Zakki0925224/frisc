@@ -1,3 +1,5 @@
+use colored::Colorize;
+
 use crate::{
     instruction::{Instruction, InstructionFormat},
     mmio_device::MmioDeviceInterface,
@@ -42,18 +44,17 @@ impl Cpu {
         ram: &mut Ram,
         mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
     ) -> anyhow::Result<()> {
-        print!("fetching ...");
+        print!("{}", "fetching ...".green());
         let instruction = self.fetch(ram)?;
-        println!("0x{:08x}", instruction);
+        println!("{}", format!("0x{:08x}", instruction).green());
 
-        print!("decoding ...");
+        print!("{}", "decoding ...".green());
         let decoded_instruction = self.decode(instruction)?;
-        println!("{:?}", decoded_instruction);
+        println!("{}", format!("{:?}", decoded_instruction).green());
 
-        print!("executing...");
+        print!("{}", "executing...".green());
         self.execute(decoded_instruction, ram, mmio_devices)?;
-        println!("done!");
-        //println!("{:?}", self);
+        println!("{}", format!("{:?}", self).green());
         Ok(())
     }
 

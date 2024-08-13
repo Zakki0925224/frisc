@@ -1,4 +1,5 @@
 pub mod debug_exit;
+pub mod simple_uart;
 
 #[derive(Debug)]
 pub struct MmioDeviceBase {

@@ -1,15 +1,14 @@
-use super::{MmioDeviceBase, MmioDeviceInterface, RequestFromDevice};
+use super::{MmioDeviceBase, MmioDeviceInterface};
 
-const DEFAULT_BASE_ADDR: u32 = 0xf4;
-const DEFAULT_MEM_BYTES_LEN: usize = 1;
+const DEFAULT_BASE_ADDR: u32 = 0x3f8; // COM1
+const DEFAULT_MEM_BYTES_LEN: usize = 5;
 
 #[derive(Debug)]
-pub struct DebugExit {
+pub struct SimpleUart {
     device_base: MmioDeviceBase,
-    exit_code: Option<u8>,
 }
 
-impl DebugExit {
+impl SimpleUart {
     fn new(device_name: String, base_addr: u32, used_mem_bytes_len: usize) -> Self {
         Self {
             device_base: MmioDeviceBase {
@@ -17,17 +16,12 @@ impl DebugExit {
                 base_addr,
                 used_mem_bytes_len,
             },
-            exit_code: None,
         }
     }
 }
 
-impl MmioDeviceInterface for DebugExit {
-    fn poll_request(&mut self) -> Option<RequestFromDevice> {
-        if let Some(exit_code) = self.exit_code {
-            return Some(RequestFromDevice::Exit(exit_code));
-        }
-
+impl MmioDeviceInterface for SimpleUart {
+    fn poll_request(&mut self) -> Option<super::RequestFromDevice> {
         None
     }
 
@@ -37,7 +31,7 @@ impl MmioDeviceInterface for DebugExit {
 
     fn store8(&mut self, bytes_offset: usize, value: u8) {
         if bytes_offset == 0 {
-            self.exit_code = Some(value);
+            print!("{}", value as char);
         }
     }
 
@@ -70,10 +64,10 @@ impl MmioDeviceInterface for DebugExit {
     }
 }
 
-impl Default for DebugExit {
+impl Default for SimpleUart {
     fn default() -> Self {
         Self::new(
-            String::from("debug-exit"),
+            String::from("simple-uart"),
             DEFAULT_BASE_ADDR,
             DEFAULT_MEM_BYTES_LEN,
         )
