@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.linkedProjects": ["./emu-cli/Cargo.toml", "./Cargo.toml"]
+}
