@@ -1,6 +1,10 @@
 use clap::Parser;
+use frisc::{emulator::Emulator, mmio_device::debug_exit::DebugExit};
 use std::fs;
-use xmas_elf::{header::Machine, ElfFile};
+use xmas_elf::{
+    header::{Machine, Type},
+    ElfFile,
+};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -25,11 +29,20 @@ fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Invalid ELF magic number"));
     }
 
-    if elf.header.pt2.machine().as_machine() != Machine::RISC_V {
+    if elf_header.pt2.machine().as_machine() != Machine::RISC_V {
         return Err(anyhow::anyhow!("Unsupported machine type"));
     }
 
+    if elf_header.pt2.type_().as_type() != Type::Executable {
+        return Err(anyhow::anyhow!("Not executable"));
+    }
+
     println!("{:?}", elf);
+
+    let mut emulator = Emulator::default();
+    emulator.register_mmio_device(Box::new(DebugExit::default()));
+    emulator.reset();
+    emulator.run()?;
 
     Ok(())
 }

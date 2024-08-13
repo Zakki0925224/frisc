@@ -1,5 +1,6 @@
 use crate::{
     instruction::{Instruction, InstructionFormat},
+    mmio_device::MmioDeviceInterface,
     ram::Ram,
     register::{ProgramCounter, Register},
 };
@@ -36,7 +37,11 @@ impl Cpu {
         self.state = CpuState::Reset;
     }
 
-    pub fn fetch_decode_execute(&mut self, ram: &mut Ram) -> anyhow::Result<()> {
+    pub fn fetch_decode_execute(
+        &mut self,
+        ram: &mut Ram,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) -> anyhow::Result<()> {
         print!("fetching ...");
         let instruction = self.fetch(ram)?;
         println!("0x{:08x}", instruction);
@@ -46,9 +51,9 @@ impl Cpu {
         println!("{:?}", decoded_instruction);
 
         print!("executing...");
-        self.execute(ram, decoded_instruction)?;
+        self.execute(decoded_instruction, ram, mmio_devices)?;
         println!("done!");
-        println!("{:?}", self);
+        //println!("{:?}", self);
         Ok(())
     }
 
@@ -81,7 +86,12 @@ impl Cpu {
         Ok(parsed_instruction)
     }
 
-    fn execute(&mut self, ram: &mut Ram, instruction: Instruction) -> anyhow::Result<()> {
+    fn execute(
+        &mut self,
+        instruction: Instruction,
+        ram: &mut Ram,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) -> anyhow::Result<()> {
         match self.state {
             CpuState::Decode => (),
             _ => return Err(anyhow::anyhow!("Invalid state for execute")),
@@ -202,7 +212,7 @@ impl Cpu {
                 } else {
                     addr - (-offset) as u32
                 };
-                let mut value = ram.load8(addr) as u32;
+                let mut value = ram.load8_with_mmio(addr, mmio_devices) as u32;
                 if value & 0x80 != 0 {
                     value |= 0xffffff00;
                 }
@@ -216,7 +226,7 @@ impl Cpu {
                 } else {
                     addr - (-offset) as u32
                 };
-                let value = ram.load8(addr) as u32;
+                let value = ram.load8_with_mmio(addr, mmio_devices) as u32;
                 self.store_x_regs(rd, value)?;
                 self.pc.increment();
             }
@@ -228,7 +238,7 @@ impl Cpu {
                     addr - (-offset) as u32
                 };
                 let value = self.load_x_regs(rs2)? as u8;
-                ram.store8(addr, value);
+                ram.store8_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
             }
             Instruction::Lh { rd, rs1, offset } => {
@@ -238,7 +248,7 @@ impl Cpu {
                 } else {
                     addr - (-offset) as u32
                 };
-                let mut value = ram.load16(addr) as u32;
+                let mut value = ram.load16_with_mmio(addr, mmio_devices) as u32;
                 if value & 0x8000 != 0 {
                     value |= 0xffff0000;
                 }
@@ -252,7 +262,7 @@ impl Cpu {
                 } else {
                     addr - (-offset) as u32
                 };
-                let value = ram.load16(addr) as u32;
+                let value = ram.load16_with_mmio(addr, mmio_devices) as u32;
                 self.store_x_regs(rd, value)?;
                 self.pc.increment();
             }
@@ -264,7 +274,7 @@ impl Cpu {
                     addr - (-offset) as u32
                 };
                 let value = self.load_x_regs(rs2)? as u16;
-                ram.store16(addr, value);
+                ram.store16_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
             }
             Instruction::Lw { rd, rs1, offset } => {
@@ -274,7 +284,7 @@ impl Cpu {
                 } else {
                     addr - (-offset) as u32
                 };
-                let value = ram.load32(addr);
+                let value = ram.load32_with_mmio(addr, mmio_devices);
                 self.store_x_regs(rd, value)?;
                 self.pc.increment();
             }
@@ -286,7 +296,7 @@ impl Cpu {
                     addr - (-offset) as u32
                 };
                 let value = self.load_x_regs(rs2)?;
-                ram.store32(addr, value);
+                ram.store32_with_mmio(addr, value, mmio_devices);
                 self.pc.increment();
             }
             Instruction::Jal { rd, offset } => {

@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::mmio_device::MmioDeviceInterface;
+
 pub const DEFAULT_RAM_SIZE: u32 = 1024 * 1024; // 1MB
 
 pub struct Ram(Vec<u8>);
@@ -67,33 +69,134 @@ impl Ram {
     }
 
     pub fn load16(&self, addr: u32) -> u16 {
-        let data1 = self.load8(addr);
-        let data2 = self.load8(addr + 1);
+        let addr = addr as usize;
+        let data1 = self.0[addr];
+        let data2 = self.0[addr + 1];
 
         // little endian
-        (data1 as u16) | ((data2 as u16) << 8)
+        u16::from_le_bytes([data1, data2])
     }
 
     pub fn store16(&mut self, addr: u32, value: u16) {
-        self.store8(addr, (value & 0xff) as u8);
-        self.store8(addr + 1, (value >> 8) as u8);
+        let bytes = value.to_le_bytes();
+        let addr = addr as usize;
+        self.0[addr] = bytes[0];
+        self.0[addr + 1] = bytes[1];
     }
 
     pub fn load32(&self, addr: u32) -> u32 {
-        let data1 = self.load8(addr);
-        let data2 = self.load8(addr + 1);
-        let data3 = self.load8(addr + 2);
-        let data4 = self.load8(addr + 3);
+        let addr = addr as usize;
+        let data1 = self.0[addr];
+        let data2 = self.0[addr + 1];
+        let data3 = self.0[addr + 2];
+        let data4 = self.0[addr + 3];
 
-        // little endian
-        (data1 as u32) | ((data2 as u32) << 8) | ((data3 as u32) << 16) | ((data4 as u32) << 24)
+        u32::from_le_bytes([data1, data2, data3, data4])
     }
 
     pub fn store32(&mut self, addr: u32, value: u32) {
-        self.store8(addr, (value & 0xff) as u8);
-        self.store8(addr + 1, (value >> 8) as u8);
-        self.store8(addr + 2, (value >> 16) as u8);
-        self.store8(addr + 3, (value >> 24) as u8);
+        let bytes = value.to_le_bytes();
+        let addr = addr as usize;
+        self.0[addr] = bytes[0];
+        self.0[addr + 1] = bytes[1];
+        self.0[addr + 2] = bytes[2];
+        self.0[addr + 3] = bytes[3];
+    }
+
+    pub fn load8_with_mmio(
+        &self,
+        addr: u32,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) -> u8 {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                return mmio_device.load8(bytes_offset);
+            }
+        }
+
+        return self.load8(addr);
+    }
+
+    pub fn store8_with_mmio(
+        &mut self,
+        addr: u32,
+        value: u8,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                mmio_device.store8(bytes_offset, value);
+                return;
+            }
+        }
+
+        self.store8(addr, value);
+    }
+
+    pub fn load16_with_mmio(
+        &self,
+        addr: u32,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) -> u16 {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                return mmio_device.load16(bytes_offset);
+            }
+        }
+
+        return self.load16(addr);
+    }
+
+    pub fn store16_with_mmio(
+        &mut self,
+        addr: u32,
+        value: u16,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                mmio_device.store16(bytes_offset, value);
+                return;
+            }
+        }
+
+        self.store16(addr, value);
+    }
+
+    pub fn load32_with_mmio(
+        &self,
+        addr: u32,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) -> u32 {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                return mmio_device.load32(bytes_offset);
+            }
+        }
+
+        return self.load32(addr);
+    }
+
+    pub fn store32_with_mmio(
+        &mut self,
+        addr: u32,
+        value: u32,
+        mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+    ) {
+        for mmio_device in mmio_devices {
+            if mmio_device.is_available_addr(addr) {
+                let bytes_offset = (addr - mmio_device.base_addr()) as usize;
+                mmio_device.store32(bytes_offset, value);
+                return;
+            }
+        }
+
+        self.store32(addr, value);
     }
 
     pub fn size(&self) -> usize {

@@ -1,6 +1,7 @@
 pub mod cpu;
 pub mod emulator;
 pub mod instruction;
+pub mod mmio_device;
 pub mod ram;
 pub mod register;
 
@@ -279,6 +280,28 @@ fn test_hello() -> anyhow::Result<()> {
     let _ = emulator.run();
 
     assert_eq!(emulator.ram.load8(0x123), 65); // A
+
+    Ok(())
+}
+
+#[test]
+fn test_debug_exit() -> anyhow::Result<()> {
+    use emulator::Emulator;
+    use mmio_device::debug_exit::DebugExit;
+
+    let ram_data = vec![
+        0x93, 0x00, 0xe0, 0x0a, // ADDI x1, x0, 0xae
+        0x13, 0x01, 0x40, 0x0f, // ADDI x2, x0, 0xf4
+        0x23, 0x00, 0x11, 0x00, // SB x1, 0(x2)
+        0x00, 0x00, 0x00, 0x00, // unreachable
+    ];
+
+    let mut emulator = Emulator::new(ram_data);
+    emulator.register_mmio_device(Box::new(DebugExit::default()));
+    emulator.reset();
+    let exit_code = emulator.run()?;
+
+    assert_eq!(exit_code, 0xae);
 
     Ok(())
 }
