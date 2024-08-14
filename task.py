@@ -4,6 +4,7 @@ import os
 
 APPS_DIR = "apps"
 EMU_CLI_DIR = "emu-cli"
+LOG_VIEWER_DIR = "frisc-log-viewer"
 
 
 def run_cmd(cmd: str, dir: str = "./", ignore_error: bool = False):
@@ -16,10 +17,6 @@ def run_cmd(cmd: str, dir: str = "./", ignore_error: bool = False):
 
 
 # tasks
-def task_run_test():
-    run_cmd("cargo test")
-
-
 def task_build_apps():
     d = f"./{APPS_DIR}"
     dirs = [f for f in os.listdir(d) if os.path.isdir(os.path.join(d, f))]
@@ -31,7 +28,15 @@ def task_build_apps():
         run_cmd("make", dir=pwd)
 
 
-TASKS = [task_run_test, task_build_apps]
+def task_run_test():
+    run_cmd("cargo test")
+
+
+def task_run_log_viewer():
+    run_cmd("npm run dev", dir=f"./{LOG_VIEWER_DIR}")
+
+
+TASKS = [task_build_apps, task_run_test, task_run_log_viewer]
 
 if __name__ == "__main__":
     args = sys.argv
