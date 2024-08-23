@@ -35,7 +35,7 @@ impl Emulator {
         self.mmio_devices.push(device);
     }
 
-    pub fn run(&mut self) -> anyhow::Result<(u8, step_log::Log)> {
+    pub fn run(&mut self, print_instruction_log: bool) -> anyhow::Result<(u8, step_log::Log)> {
         let mut log = step_log::Log {
             init_cpu_state: step_log::CpuStateLog::new(&self.cpu),
             init_ram: self.ram.0.clone(),
@@ -67,7 +67,7 @@ impl Emulator {
 
             let step_log = self
                 .cpu
-                .fetch_decode_execute(&mut self.ram, &mut self.mmio_devices)?;
+                .fetch_decode_execute(&mut self.ram, &mut self.mmio_devices, print_instruction_log)?;
             log.steps.push(step_log);
 
             if self.cpu.pc.load() as usize >= self.ram.size() {

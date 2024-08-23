@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::fmt::{self, Debug};
 
 pub enum InstructionFormat {
     R {
@@ -233,7 +234,7 @@ impl InstructionFormat {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum Instruction {
     Add { rd: usize, rs1: usize, rs2: usize },
     Addi { rd: usize, rs1: usize, imm: i16 },
@@ -277,6 +278,53 @@ pub enum Instruction {
     Ebreak,
 }
 
+impl Debug for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add { rd, rs1, rs2 } => write!(f, "add x{rd}, x{rs1}, x{rs2}"),
+            Self::Addi { rd, rs1, imm } => write!(f, "addi x{rd}, x{rs1}, {imm}"),
+            Self::Sub { rd, rs1, rs2 } => write!(f, "sub x{rd}, x{rs1}, x{rs2}"),
+            Self::And { rd, rs1, rs2 } => write!(f, "and x{rd}, x{rs1}, x{rs2}"),
+            Self::Andi { rd, rs1, imm } => write!(f, "andi x{rd}, x{rs1}, {imm}"),
+            Self::Or { rd, rs1, rs2 } => write!(f, "or x{rd}, x{rs1}, x{rs2}"),
+            Self::Ori { rd, rs1, imm } => write!(f, "ori x{rd}, x{rs1}, {imm}"),
+            Self::Xor { rd, rs1, rs2 } => write!(f, "xor x{rd}, x{rs1}, x{rs2}"),
+            Self::Xori { rd, rs1, imm } => write!(f, "xori x{rd}, x{rs1}, {imm}"),
+            Self::Sll { rd, rs1, rs2 } => write!(f, "sll x{rd}, x{rs1}, x{rs2}"),
+            Self::Slli { rd, rs1, shamt } => write!(f, "slli x{rd}, x{rs1}, {shamt}"),
+            Self::Srl { rd, rs1, rs2 } => write!(f, "srl x{rd}, x{rs1}, x{rs2}"),
+            Self::Srli { rd, rs1, shamt } => write!(f, "srli x{rd}, x{rs1}, {shamt}"),
+            Self::Sra { rd, rs1, rs2 } => write!(f, "sra x{rd}, x{rs1}, x{rs2}"),
+            Self::Srai { rd, rs1, shamt } => write!(f, "srai x{rd}, x{rs1}, {shamt}"),
+            Self::Slt { rd, rs1, rs2 } => write!(f, "slt x{rd}, x{rs1}, x{rs2}"),
+            Self::Slti { rd, rs1, imm } => write!(f, "slti x{rd}, x{rs1}, {imm}"),
+            Self::Sltu { rd, rs1, rs2 } => write!(f, "sltu x{rd}, x{rs1}, x{rs2}"),
+            Self::Sltiu { rd, rs1, imm } => write!(f, "sltiu x{rd}, x{rs1}, {imm}"),
+            Self::Lb { rd, rs1, offset } => write!(f, "lb x{rd}, x{rs1}, {offset}"),
+            Self::Lbu { rd, rs1, offset } => write!(f, "lbu x{rd}, x{rs1}, {offset}"),
+            Self::Sb { rs1, rs2, offset } => write!(f, "sb x{rs1}, x{rs2}, {offset}"),
+            Self::Lh { rd, rs1, offset } => write!(f, "lh x{rd}, x{rs1}, {offset}"),
+            Self::Lhu { rd, rs1, offset } => write!(f, "lhu x{rd}, x{rs1}, {offset}"),
+            Self::Sh { rs1, rs2, offset } => write!(f, "sh x{rs1}, x{rs2}, {offset}"),
+            Self::Lw { rd, rs1, offset } => write!(f, "lw x{rd}, x{rs1}, {offset}"),
+            Self::Sw { rs1, rs2, offset } => write!(f, "sw x{rs1}, x{rs2}, {offset}"),
+            Self::Jal { rd, offset } => write!(f, "jal x{rd}, {offset}"),
+            Self::Jalr { rd, rs1, offset } => write!(f, "jalr x{rd}, x{rs1}, {offset}"),
+            Self::Beq { rs1, rs2, offset } => write!(f, "beq x{rs1}, x{rs2}, {offset}"),
+            Self::Bne { rs1, rs2, offset } => write!(f, "bne x{rs1}, x{rs2}, {offset}"),
+            Self::Blt { rs1, rs2, offset } => write!(f, "blt x{rs1}, x{rs2}, {offset}"),
+            Self::Bge { rs1, rs2, offset } => write!(f, "bge x{rs1}, x{rs2}, {offset}"),
+            Self::Bltu { rs1, rs2, offset } => write!(f, "bltu x{rs1}, x{rs2}, {offset}"),
+            Self::Bgeu { rs1, rs2, offset } => write!(f, "bgeu x{rs1}, x{rs2}, {offset}"),
+            Self::Lui { rd, imm } => write!(f, "lui x{rd}, {imm}"),
+            Self::Auipc { rd, imm } => write!(f, "auipc x{rd}, {imm}"),
+            Self::Fence { pred, succ } => write!(f, "fence {pred}, {succ}"),
+            Self::Ecall => write!(f, "ecall"),
+            Self::Ebreak => write!(f, "ebreak"),
+        }
+    }
+}
+
 impl Instruction {
     pub fn parse(instruction_format: InstructionFormat) -> anyhow::Result<Self> {
         let ins = match instruction_format {
@@ -303,7 +351,7 @@ impl Instruction {
                     (0b101, 0b0100000) => Self::Sra { rd, rs1, rs2 },
                     (0b010, 0b0000000) => Self::Slt { rd, rs1, rs2 },
                     (0b011, 0b0000000) => Self::Sltu { rd, rs1, rs2 },
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::I {
@@ -342,7 +390,7 @@ impl Instruction {
                     (0b0000011, 0b101, _) => Self::Lhu { rd, rs1, offset },
                     (0b0000011, 0b010, _) => Self::Lw { rd, rs1, offset },
                     (0b1100111, 0b000, _) => Self::Jalr { rd, rs1, offset },
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::S {
@@ -362,7 +410,7 @@ impl Instruction {
                     0b000 => Self::Sb { rs1, rs2, offset },
                     0b001 => Self::Sh { rs1, rs2, offset },
                     0b010 => Self::Sw { rs1, rs2, offset },
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::B {
@@ -392,7 +440,7 @@ impl Instruction {
                     0b101 => Self::Bge { rs1, rs2, offset },
                     0b110 => Self::Bltu { rs1, rs2, offset },
                     0b111 => Self::Bgeu { rs1, rs2, offset },
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::U {
@@ -406,7 +454,7 @@ impl Instruction {
                 match opcode {
                     0b0110111 => Self::Lui { rd, imm },
                     0b0010111 => Self::Auipc { rd, imm },
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
             InstructionFormat::J {
@@ -441,7 +489,7 @@ impl Instruction {
                     (0b0001111, _) => Self::Fence { pred, succ },
                     (0b1110011, 0) => Self::Ecall,
                     (0b1110011, 1) => Self::Ebreak,
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
         };

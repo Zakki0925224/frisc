@@ -47,6 +47,7 @@ impl Cpu {
         &mut self,
         ram: &mut Ram,
         mmio_devices: &mut Vec<Box<dyn MmioDeviceInterface>>,
+        print_instruction_log: bool,
     ) -> anyhow::Result<step_log::CpuStep> {
         let fetched_instruction = self.fetch(ram)?;
         let decoded_instruction = self.decode(fetched_instruction)?;
@@ -60,6 +61,12 @@ impl Cpu {
             ram_writes,
         };
         self.step += 1;
+
+        if print_instruction_log {
+            let pc = cpu_step.cpu_state.pc;
+            println!("0x{:08x} 0x{:08x} {:?}", pc, cpu_step.fetched_instruction, cpu_step.decoded_instruction);
+        }
+
         Ok(cpu_step)
     }
 

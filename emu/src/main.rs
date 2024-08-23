@@ -9,21 +9,23 @@ use std::{
 };
 use xmas_elf::{
     header,
-    program::{self, SegmentData},
+    program::{self, ProgramHeader, SegmentData},
     ElfFile,
 };
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long)]
+    #[arg(long, short)]
     program_path: String,
-    #[arg(long)]
+    #[arg(long, short)]
     step_log_path: Option<String>,
-    #[arg(long)]
+    #[arg(long, short)]
     ram_size: Option<usize>,
-    #[arg(long)]
+    #[arg(long, short)]
     default_sp: Option<u32>,
+    #[arg(long, short)]
+    instruction_log: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -46,14 +48,7 @@ fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("Not executable"));
     }
 
-    let mut loadable_phs = Vec::new();
-    for ph in elf.program_iter() {
-        if ph.get_type().unwrap() != program::Type::Load {
-            continue;
-        }
-        loadable_phs.push(ph);
-    }
-
+    let loadable_phs: Vec<ProgramHeader> = elf.program_iter().filter(|p|p.get_type().unwrap() == program::Type::Load).collect();
     let max_ram_size = loadable_phs
         .iter()
         .map(|ph| ph.virtual_addr() + ph.mem_size())
@@ -70,12 +65,17 @@ fn main() -> anyhow::Result<()> {
     let mut ram = vec![0u8; (args.ram_size.unwrap_or(max_ram_size) + default_stack_size + 3) & !3];
     for ph in loadable_phs {
         let offset = ph.virtual_addr() as usize;
-        let size = ph.mem_size() as usize;
+        let file_size = ph.file_size() as usize;
+        let mem_size = ph.mem_size() as usize;
         let data = match ph.get_data(&elf).unwrap() {
             SegmentData::Undefined(data) => data,
             _ => return Err(anyhow::anyhow!("Unsupported segment type")),
         };
-        ram[offset..offset + size].copy_from_slice(data);
+        ram[offset..offset + file_size].copy_from_slice(&data[..file_size]);
+
+        if mem_size > file_size {
+            ram[offset + file_size..offset + mem_size].fill(0);
+        }
     }
 
     let default_pc = elf_header.pt2.entry_point() as u32;
@@ -87,7 +87,7 @@ fn main() -> anyhow::Result<()> {
     emulator.reset();
     emulator.cpu.pc.store(default_pc); // pc
     emulator.cpu.x_regs[2].store(default_sp); // sp
-    let (exit_code, log) = emulator.run()?;
+    let (exit_code, log) = emulator.run(args.instruction_log)?;
     println!("Exited with 0x{:x}", exit_code);
 
     if let Some(step_log_path) = args.step_log_path {

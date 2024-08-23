@@ -18,7 +18,7 @@ fn test_add_addi() -> anyhow::Result<()> {
     ];
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[1].load(), 1);
     assert_eq!(emulator.cpu.x_regs[2].load(), 2);
@@ -41,7 +41,7 @@ fn test_sub() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[3].load(), 1);
     assert_eq!(emulator.cpu.x_regs[4].load() as i32, -2);
@@ -62,7 +62,7 @@ fn test_and_andi() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[10].load(), 130);
     assert_eq!(emulator.cpu.x_regs[12].load(), 128);
@@ -83,7 +83,7 @@ fn test_or_ori() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[8].load(), 839);
     assert_eq!(emulator.cpu.x_regs[9].load() as i32, -1);
@@ -104,7 +104,7 @@ fn test_xor_xori() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[9].load(), 1641);
     assert_eq!(emulator.cpu.x_regs[10].load() as i32, -2028);
@@ -127,7 +127,7 @@ fn test_sll_slli_srl_srli() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[4].load(), 736);
     assert_eq!(emulator.cpu.x_regs[5].load(), 40);
@@ -150,7 +150,7 @@ fn test_sra_srai() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[3].load() as i32, -1);
     assert_eq!(emulator.cpu.x_regs[4].load() as i32, -1);
@@ -173,7 +173,7 @@ fn test_slt_slti_sltu_sltiu() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[3].load(), 0);
     assert_eq!(emulator.cpu.x_regs[4].load(), 0);
@@ -196,7 +196,7 @@ fn test_lb_lbu_sb() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[2].load() as i32, -25);
     assert_eq!(emulator.cpu.x_regs[3].load(), 231);
@@ -217,7 +217,7 @@ fn test_lw_sw() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[2].load() as i32, -25);
     assert_eq!(emulator.ram.load32(0) as i32, -25);
@@ -235,7 +235,7 @@ fn test_jal() -> anyhow::Result<()> {
 
     let mut emulator = Emulator::new(ram_data);
     emulator.reset();
-    emulator.run()?;
+    emulator.run(false)?;
 
     assert_eq!(emulator.cpu.x_regs[1].load(), 4);
     assert_eq!(emulator.cpu.pc.load(), 128);
@@ -278,7 +278,7 @@ fn test_hello() -> anyhow::Result<()> {
     let mut emulator = Emulator::new(ram);
     emulator.reset();
     emulator.cpu.x_regs[2].store(0x1000); // sp
-    let _ = emulator.run();
+    let _ = emulator.run(false)?;
 
     assert_eq!(emulator.ram.load8(0x123), 65); // A
 
@@ -300,7 +300,7 @@ fn test_debug_exit() -> anyhow::Result<()> {
     let mut emulator = Emulator::new(ram_data);
     emulator.register_mmio_device(Box::new(DebugExit::default()));
     emulator.reset();
-    let (exit_code, _) = emulator.run()?;
+    let (exit_code, _) = emulator.run(false)?;
 
     assert_eq!(exit_code, 0xae);
 
